@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Minesweeper</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <!-- Screen 1: Menu -->
+    <div id="screen-menu" class="screen active">
+        <div class="menu-content">
+            <div class="mine-icon-container">
+                <svg class="mine-icon" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="60" cy="60" r="40" fill="var(--accent)"/>
+                    <rect x="48" y="0" width="24" height="24" rx="6" fill="var(--accent)"/>
+                    <rect x="48" y="96" width="24" height="24" rx="6" fill="var(--accent)"/>
+                    <rect x="0" y="48" width="24" height="24" rx="6" fill="var(--accent)"/>
+                    <rect x="96" y="48" width="24" height="24" rx="6" fill="var(--accent)"/>
+                    <rect x="50" y="50" width="20" height="20" rx="4" fill="var(--bg-primary)"/>
+                </svg>
+            </div>
+            <div class="difficulty-selector">
+                <button id="diff-prev" class="nav-arrow" aria-label="Previous difficulty">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="15 18 9 12 15 6"></polyline>
+                    </svg>
+                </button>
+                <span id="diff-name" class="difficulty-name">Easy</span>
+                <button id="diff-next" class="nav-arrow" aria-label="Next difficulty">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="9 18 15 12 9 6"></polyline>
+                    </svg>
+                </button>
+            </div>
+            <button id="btn-new-game" class="btn-outlined">New Game</button>
+        </div>
+
+        <div class="bottom-nav">
+            <button id="nav-settings" class="nav-btn" aria-label="Settings">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="3"></circle>
+                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                </svg>
+            </button>
+            <button id="nav-leaderboard" class="nav-btn" aria-label="Leaderboard">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="8" y1="6" x2="21" y2="6"></line>
+                    <line x1="8" y1="12" x2="21" y2="12"></line>
+                    <line x1="8" y1="18" x2="21" y2="18"></line>
+                    <line x1="3" y1="6" x2="3.01" y2="6"></line>
+                    <line x1="3" y1="12" x2="3.01" y2="12"></line>
+                    <line x1="3" y1="18" x2="3.01" y2="18"></line>
+                </svg>
+            </button>
+            <button id="nav-info" class="nav-btn" aria-label="Info">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="16" x2="12" y2="12"></line>
+                    <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                </svg>
+            </button>
+        </div>
+    </div>
+
+    <!-- Screen 2: Game -->
+    <div id="screen-game" class="screen">
+        <div class="game-header">
+            <button id="game-back" class="header-btn" aria-label="Back">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="15 18 9 12 15 6"></polyline>
+                </svg>
+            </button>
+            <div class="game-stats">
+                <span id="game-timer">0S</span>
+            </div>
+            <div style="width: 40px;"></div>
+        </div>
+
+        <div class="game-board-wrapper" id="board-wrapper">
+            <div class="game-board" id="game-board"></div>
+            <div class="tap-overlay" id="tap-overlay">
+                <span>Tap to begin.</span>
+            </div>
+        </div>
+
+        <div class="action-toggle-container" id="action-toggle-container" style="display: none;">
+            <button id="action-dig" class="action-toggle-btn active" data-action="dig" aria-label="Dig">
+                <svg width="24" height="24" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="60" cy="60" r="40" fill="currentColor"/>
+                    <rect x="48" y="0" width="24" height="24" rx="6" fill="currentColor"/>
+                    <rect x="48" y="96" width="24" height="24" rx="6" fill="currentColor"/>
+                    <rect x="0" y="48" width="24" height="24" rx="6" fill="currentColor"/>
+                    <rect x="96" y="48" width="24" height="24" rx="6" fill="currentColor"/>
+                </svg>
+            </button>
+            <button id="action-flag" class="action-toggle-btn" data-action="flag" aria-label="Flag">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M5 21V3"></path>
+                    <path d="M5 3l12 7-12 7" fill="currentColor"></path>
+                </svg>
+            </button>
+        </div>
+    </div>
+
+    <!-- Screen 3: Settings -->
+    <div id="screen-settings" class="screen">
+        <div class="screen-header">
+            <button id="settings-back" class="header-btn" aria-label="Back">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="15 18 9 12 15 6"></polyline>
+                </svg>
+            </button>
+            <h1 class="screen-title">Settings</h1>
+            <div style="width: 40px;"></div>
+        </div>
+
+        <div class="settings-content" id="settings-content">
+            <!-- Populated by settings.js -->
+        </div>
+    </div>
+
+    <!-- Screen 4: Leaderboard -->
+    <div id="screen-leaderboard" class="screen">
+        <div class="screen-header">
+            <button id="leaderboard-back" class="header-btn" aria-label="Back">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="15 18 9 12 15 6"></polyline>
+                </svg>
+            </button>
+            <h1 class="screen-title">Leaderboard</h1>
+            <div style="width: 40px;"></div>
+        </div>
+
+        <div class="leaderboard-content" id="leaderboard-content">
+            <!-- Populated by leaderboard.js -->
+        </div>
+    </div>
+
+    <!-- Screen 5: Info -->
+    <div id="screen-info" class="screen">
+        <div class="screen-header">
+            <button id="info-back" class="header-btn" aria-label="Back">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="15 18 9 12 15 6"></polyline>
+                </svg>
+            </button>
+            <h1 class="screen-title">How to Play</h1>
+            <div style="width: 40px;"></div>
+        </div>
+
+        <div class="info-content">
+            <div class="info-section">
+                <h2>Reveal Cells</h2>
+                <p>Tap on a cell to reveal what's underneath. If it's empty, adjacent cells will automatically be revealed too.</p>
+            </div>
+            <div class="info-section">
+                <h2>Numbers</h2>
+                <p>Numbers indicate how many mines are adjacent to that cell. Use these clues to figure out where the mines are hidden.</p>
+            </div>
+            <div class="info-section">
+                <h2>Flagging</h2>
+                <p>Long press on a cell to place a flag where you think a mine is. Long press again to remove the flag.</p>
+            </div>
+            <div class="info-section">
+                <h2>Winning</h2>
+                <p>Clear all non-mine cells to win the game. You don't need to flag every mine — just reveal all safe cells.</p>
+            </div>
+            <div class="info-section">
+                <h2>Easy Digging</h2>
+                <p>When a revealed number has all its mines flagged around it, tapping it will automatically reveal the remaining adjacent cells.</p>
+            </div>
+            <div class="info-section">
+                <h2>Easy Flagging</h2>
+                <p>When a revealed number has exactly as many unrevealed neighbors as its value, tapping it will automatically flag all those neighbors.</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/game.js"></script>
+    <script src="js/settings.js"></script>
+    <script src="js/leaderboard.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
