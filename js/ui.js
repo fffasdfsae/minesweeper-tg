@@ -68,11 +68,16 @@ class GameUI {
         const availW = rect.width  - 32; // account for padding
         const availH = rect.height - 32;
 
+        // Account for 1px gap between cells
+        const gapW = game.cols - 1;
+        const gapH = game.rows - 1;
+
         let cellSize = Math.min(
-            Math.floor(availW / game.cols),
-            Math.floor(availH / game.rows)
+            Math.floor((availW - gapW) / game.cols),
+            Math.floor((availH - gapH) / game.rows)
         );
-        cellSize = Math.max(cellSize, 28); // minimum for touch targets
+        
+        // Remove minimum limit so it always fits the screen (no scrolling)
         cellSize = Math.min(cellSize, 44); // maximum for aesthetics
 
         board.style.gridTemplateColumns = `repeat(${game.cols}, ${cellSize}px)`;
@@ -109,6 +114,26 @@ class GameUI {
         if (!this._boardHandlersSet) {
             this._setupBoardHandlers(board);
             this._boardHandlersSet = true;
+        }
+
+        // Initialize Panzoom
+        if (this.pz) {
+            this.pz.dispose();
+            this.pz = null;
+        }
+        if (typeof panzoom === 'function') {
+            this.pz = panzoom(board, {
+                maxZoom: 5,
+                minZoom: 1,
+                bounds: true,
+                boundsPadding: 0.1,
+                smoothScroll: false,
+                zoomDoubleClickSpeed: 1, // Disable double-click zoom
+                onTouch: function(e) {
+                    // Let our custom touch handlers work!
+                    return false; 
+                }
+            });
         }
 
         // UI reset

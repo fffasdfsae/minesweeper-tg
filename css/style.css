@@ -217,9 +217,8 @@ body {
     justify-content: center;
     padding: 16px;
     position: relative;
-    overflow: auto;
-    -webkit-overflow-scrolling: touch;
-    touch-action: pan-x pan-y pinch-zoom;
+    overflow: hidden;
+    touch-action: none;
 }
 
 .game-board {
