@@ -2,20 +2,20 @@
    CSS Variables — Telegram Theme Integration
    ======================================== */
 :root {
-    --bg-primary: var(--tg-bg-color, #1a1a2e);
-    --bg-secondary: var(--tg-secondary-bg-color, #252540);
-    --text-primary: var(--tg-text-color, #ffffff);
-    --text-secondary: var(--tg-hint-color, #8e8ea0);
-    --accent: #9da4c7;
-    --accent-dim: rgba(157, 164, 199, 0.15);
-    --cell-closed: #9da4c7;
+    --bg-primary: #9da4c7;
+    --bg-secondary: #8c93b3;
+    --text-primary: #ffffff;
+    --text-secondary: #4a4d63;
+    --accent: #2a2a40;
+    --accent-dim: rgba(42, 42, 64, 0.15);
+    --cell-closed: transparent;
     --cell-opened: #2a2a40;
-    --cell-flagged: #3e3e58;
-    --border-color: rgba(255, 255, 255, 0.08);
-    --border-dashed: rgba(255, 255, 255, 0.12);
-    --toggle-on-bg: #9da4c7;
+    --cell-flagged: transparent;
+    --cell-border: #1a1a26;
+    --border-color: rgba(0, 0, 0, 0.08);
+    --toggle-on-bg: #2a2a40;
     --toggle-off-bg: transparent;
-    --toggle-off-border: #5a5a70;
+    --toggle-off-border: #4a4d63;
     --btn-outline-border: #5a5a70;
     --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     --transition-speed: 0.25s;
@@ -223,11 +223,8 @@ body {
 
 .game-board {
     display: grid;
-    border-radius: 12px;
-    overflow: hidden;
     position: relative;
-    gap: 1px;
-    background-color: var(--bg-primary);
+    padding: 8px; /* Optional padding so panzoom bounds look nice */
 }
 
 .tap-overlay {
@@ -267,6 +264,10 @@ body {
     background: var(--cell-opened);
     color: var(--text-primary);
     cursor: default;
+    border-radius: 4px;
+    box-shadow: inset 0 0 0 1px var(--cell-border);
+    transform: scale(1);
+    animation: cellPop 0.15s ease-out;
 }
 
 .cell.revealed.empty {

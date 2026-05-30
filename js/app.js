@@ -19,7 +19,7 @@ class App {
 
         // Difficulty selection
         this.difficulties  = ['easy', 'medium', 'hard', 'extreme'];
-        this.diffLabels    = { easy: 'Easy', medium: 'Medium', hard: 'Hard', extreme: 'Extreme' };
+        this.diffLabels    = { easy: 'Легко', medium: 'Середньо', hard: 'Складно', extreme: 'Екстрим' };
         this.currentDiffIndex = 0;
 
         // Screen navigation

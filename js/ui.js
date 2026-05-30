@@ -123,10 +123,11 @@ class GameUI {
 
         this.panzoom = Panzoom(board, {
             maxScale: 6,
-            minScale: 1,
+            minScale: 0.5,
             contain: 'outside',
             animate: true,
-            canvas: true // better performance
+            canvas: true, // better performance
+            step: 0.5 // faster zoom
         });
         
         // Allow zooming with mouse wheel (desktop testing)
@@ -171,7 +172,15 @@ class GameUI {
 
         board.addEventListener('touchcancel', () => this._cancelLongPress());
         board.addEventListener('touchmove',   () => this._cancelLongPress());
-        board.addEventListener('panzoompan',  () => this._cancelLongPress());
+        
+        board.addEventListener('panzoomchange', () => {
+            this._isDragging = true;
+            this._cancelLongPress();
+        });
+        board.addEventListener('panzoomend', () => {
+            // Short delay to prevent click after drag
+            setTimeout(() => { this._isDragging = false; }, 50);
+        });
 
         // ── Mouse events ─────────────────────────
         board.addEventListener('mousedown', (e) => {
@@ -217,6 +226,8 @@ class GameUI {
     /** @private */
     _onPointerUp(row, col) {
         this._cancelLongPress();
+        if (this._isDragging) return; // Ignore if it was a drag/pan/zoom
+        
         if (!this._longPressFired &&
             row === this._touchStartRow &&
             col === this._touchStartCol) {
@@ -459,45 +470,57 @@ class GameUI {
             setTimeout(() => {
                 const timeStr = this.leaderboard.formatTime(this.game.timer);
                 const msg = rank
-                    ? `Time: ${timeStr}\nNew record! Rank #${rank}`
-                    : `Time: ${timeStr}`;
-                this._showEndDialog('🎉 You won!', msg);
+                    ? `Час: ${timeStr}\nНовий рекорд! Місце #${rank}`
+                    : `Час: ${timeStr}`;
+                this._showEndDialog('🎉 Ви перемогли!', msg, true);
             }, 400);
         } else {
             if (this.settings.get('vibration')) this._haptic('error');
             const mineCount = this.game.getAllMines().length;
             setTimeout(() => {
-                this._showEndDialog('💥 Game Over', 'Better luck next time!');
+                this._showEndDialog('💥 Гру закінчено', 'Спробуйте ще раз!', false);
             }, mineCount * 30 + 600);
         }
     }
 
     /** @private  Try Telegram native popup, fall back to custom dialog. */
-    _showEndDialog(title, message) {
+    _showEndDialog(title, message, isWin) {
         try {
             const tg = window.Telegram?.WebApp;
             if (tg && typeof tg.showPopup === 'function') {
+                const buttons = [];
+                if (isWin && this.leaderboard) {
+                    buttons.push({
+                        id: 'submit_score',
+                        type: 'default',
+                        text: 'Зберегти результат'
+                    });
+                }
+                buttons.push({
+                    id: 'play_again',
+                    type: isWin ? 'ok' : 'destructive',
+                    text: isWin ? 'Грати знову' : 'Спробувати ще'
+                });
+                buttons.push({ id: 'menu', type: 'default', text: 'Меню' });
+
                 tg.showPopup({
                     title,
                     message,
-                    buttons: [
-                        { id: 'new',  type: 'default', text: 'New Game' },
-                        { id: 'menu', type: 'default', text: 'Menu' }
-                    ]
+                    buttons
                 }, (id) => {
-                    if (id === 'new') window.app?.startNewGame();
-                    else              window.app?.showScreen('menu');
+                    if (id === 'play_again') window.app?.startNewGame();
+                    else if (id === 'menu')   window.app?.showScreen('menu');
                 });
                 return;
             }
         } catch (e) { /* Telegram popup not available */ }
 
         // Fallback: custom dialog
-        this._showCustomDialog(title, message);
+        this._showCustomDialog(title, message, isWin);
     }
 
     /** @private  Custom HTML dialog for browser testing. */
-    _showCustomDialog(title, message) {
+    _showCustomDialog(title, message, isWin) {
         const overlay = document.createElement('div');
         overlay.id = 'game-end-overlay';
         overlay.style.cssText = `
@@ -536,8 +559,8 @@ class GameUI {
             return b;
         };
 
-        btns.appendChild(makeBtn('New Game', () => window.app?.startNewGame()));
-        btns.appendChild(makeBtn('Menu',     () => window.app?.showScreen('menu')));
+        btns.appendChild(makeBtn(isWin ? 'Грати знову' : 'Спробувати ще', () => window.app?.startNewGame()));
+        btns.appendChild(makeBtn('Меню',     () => window.app?.showScreen('menu')));
 
         modal.append(h, p, btns);
         overlay.appendChild(modal);
@@ -554,16 +577,16 @@ class GameUI {
         container.innerHTML = '';
 
         const configs = [
-            { key: 'cellBorders',       title: 'Cell borders',       desc: 'Choose whether to display cell borders or not.',                                                                                                                    type: 'toggle'  },
-            { key: 'showActionToggle',  title: 'Show action toggle', desc: 'Choose whether there is a mine/flag toggle at the bottom of the screen. For a cleaner feel you can hide it. Then only your default action is available during the game.', type: 'toggle'  },
-            { key: 'defaultAction',     title: 'Default action',     desc: 'Choose, which action is enabled by default. Either dig or flag.',                                                                                                    type: 'action'  },
-            { key: 'longPress',         title: 'Long press',         desc: 'Use long press for the secondary action.\n\nNote: When this is turned off, action toggle is forced to be visible.',                                                  type: 'toggle'  },
-            { key: 'longPressDelay',    title: 'Long press delay',   desc: 'Choose how long does it take to keep your finger on a cell to use the secondary action.\n\nNB! Setting the delay too low, the system might not differentiate simple taps from the long ones.', type: 'slider', min: 100, max: 500, step: 10, unit: 'ms' },
-            { key: 'easyDigging',       title: 'Easy digging',       desc: 'Clicking a number will dig all of its surrounding unflagged cells with one tap. It will work if the amount of surrounding flagged cells matches the clicked digit.',  type: 'toggle'  },
-            { key: 'easyFlagging',      title: 'Easy flagging',      desc: 'Clicking a number will flag all of its surrounding closed cells with one tap. It will work if the amount of surrounding closed cells matches the clicked digit.',     type: 'toggle'  },
-            { key: 'animationSpeed',    title: 'Animation speeds',   desc: 'Increase the percentage for a more relaxing experience. Set it to 0% to disable most animations for a faster pace.',                                                type: 'slider', min: 0, max: 150, step: 5, unit: '%' },
-            { key: 'vibration',         title: 'Vibration',          desc: '',                                                                                                                                                                   type: 'toggle'  },
-            { key: 'vibrationIntensity',title: 'Vibration intensity',desc: 'Adjust the vibration intensity of the secondary action.',                                                                                                            type: 'slider', min: 5, max: 200, step: 5, unit: 'ms' }
+            { key: 'cellBorders',       title: 'Межі клітинок',       desc: 'Показувати межі між закритими клітинками.',                                                                                                                    type: 'toggle'  },
+            { key: 'showActionToggle',  title: 'Кнопки дій',          desc: 'Показувати перемикач Копати/Прапорець внизу екрану.', type: 'toggle'  },
+            { key: 'defaultAction',     title: 'Дія за замовчуванням',desc: 'Що відбувається при звичайному кліку (копати чи ставити прапорець).',                                                                                                    type: 'action'  },
+            { key: 'longPress',         title: 'Довге натискання',    desc: 'Використовувати довге натискання для альтернативної дії.\n\nЯкщо вимкнено, кнопки дій внизу будуть показуватись примусово.',                                                  type: 'toggle'  },
+            { key: 'longPressDelay',    title: 'Затримка довгого кліку',desc: 'Час у мілісекундах для спрацьовування довгого натискання.', type: 'slider', min: 100, max: 500, step: 10, unit: 'ms' },
+            { key: 'easyDigging',       title: 'Швидке відкриття',    desc: 'Натискання на цифру відкриє сусідні клітинки, якщо навколо вже стоять прапорці.',  type: 'toggle'  },
+            { key: 'easyFlagging',      title: 'Швидкі прапорці',     desc: 'Натискання на цифру поставить прапорці на всі сусідні закриті клітинки, якщо їх кількість збігається.',     type: 'toggle'  },
+            { key: 'animationSpeed',    title: 'Швидкість анімації',  desc: 'Більший відсоток робить анімацію плавнішою і повільнішою.',                                                type: 'slider', min: 0, max: 150, step: 5, unit: '%' },
+            { key: 'vibration',         title: 'Вібрація',            desc: 'Легка віддача при встановленні прапорців.',                                                                                                                                                                   type: 'toggle'  },
+            { key: 'vibrationIntensity',title: 'Сила вібрації',       desc: 'Тривалість вібрації у мілісекундах.',                                                                                                            type: 'slider', min: 5, max: 200, step: 5, unit: 'ms' }
         ];
 
         configs.forEach(cfg => {

@@ -31,24 +31,24 @@
                         <polyline points="15 18 9 12 15 6"></polyline>
                     </svg>
                 </button>
-                <span id="diff-name" class="difficulty-name">Easy</span>
+                <span id="diff-name" class="difficulty-name">Легко</span>
                 <button id="diff-next" class="nav-arrow" aria-label="Next difficulty">
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <polyline points="9 18 15 12 9 6"></polyline>
                     </svg>
                 </button>
             </div>
-            <button id="btn-new-game" class="btn-outlined">New Game</button>
+            <button id="btn-new-game" class="btn-primary">Нова Гра</button>
         </div>
 
         <div class="bottom-nav">
-            <button id="nav-settings" class="nav-btn" aria-label="Settings">
+            <button id="nav-settings" class="nav-btn" aria-label="Налаштування">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <circle cx="12" cy="12" r="3"></circle>
                     <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
                 </svg>
             </button>
-            <button id="nav-leaderboard" class="nav-btn" aria-label="Leaderboard">
+            <button id="nav-leaderboard" class="nav-btn" aria-label="Рейтинг">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <line x1="8" y1="6" x2="21" y2="6"></line>
                     <line x1="8" y1="12" x2="21" y2="12"></line>
@@ -85,7 +85,7 @@
         <div class="game-board-wrapper" id="board-wrapper">
             <div class="game-board" id="game-board"></div>
             <div class="tap-overlay" id="tap-overlay">
-                <span>Tap to begin.</span>
+                <span>Торкніться, щоб почати.</span>
             </div>
         </div>
 
@@ -116,7 +116,7 @@
                     <polyline points="15 18 9 12 15 6"></polyline>
                 </svg>
             </button>
-            <h1 class="screen-title">Settings</h1>
+            <h1 class="screen-title">Налаштування</h1>
             <div style="width: 40px;"></div>
         </div>
 
@@ -133,7 +133,7 @@
                     <polyline points="15 18 9 12 15 6"></polyline>
                 </svg>
             </button>
-            <h1 class="screen-title">Leaderboard</h1>
+            <h1 class="screen-title">Рейтинг</h1>
             <div style="width: 40px;"></div>
         </div>
 
@@ -150,34 +150,34 @@
                     <polyline points="15 18 9 12 15 6"></polyline>
                 </svg>
             </button>
-            <h1 class="screen-title">How to Play</h1>
+            <h1 class="screen-title">Як грати</h1>
             <div style="width: 40px;"></div>
         </div>
 
         <div class="info-content">
             <div class="info-section">
-                <h2>Reveal Cells</h2>
-                <p>Tap on a cell to reveal what's underneath. If it's empty, adjacent cells will automatically be revealed too.</p>
+                <h2>Відкриття клітинок</h2>
+                <p>Натисніть на клітинку, щоб відкрити її. Якщо там немає міни і цифри, сусідні клітинки відкриються автоматично.</p>
             </div>
             <div class="info-section">
-                <h2>Numbers</h2>
-                <p>Numbers indicate how many mines are adjacent to that cell. Use these clues to figure out where the mines are hidden.</p>
+                <h2>Цифри</h2>
+                <p>Цифри показують, скільки мін знаходиться у 8 сусідніх клітинках. Використовуйте цю інформацію, щоб знайти міни.</p>
             </div>
             <div class="info-section">
-                <h2>Flagging</h2>
-                <p>Long press on a cell to place a flag where you think a mine is. Long press again to remove the flag.</p>
+                <h2>Прапорці (Міни)</h2>
+                <p>Довге натискання на закриту клітинку ставить прапорець (якщо ви вважаєте, що там міна). Ще одне довге натискання знімає його.</p>
             </div>
             <div class="info-section">
-                <h2>Winning</h2>
-                <p>Clear all non-mine cells to win the game. You don't need to flag every mine — just reveal all safe cells.</p>
+                <h2>Перемога</h2>
+                <p>Відкрийте всі клітинки, де немає мін, щоб виграти. Ставити прапорці на всі міни не обов'язково.</p>
             </div>
             <div class="info-section">
-                <h2>Easy Digging</h2>
-                <p>When a revealed number has all its mines flagged around it, tapping it will automatically reveal the remaining adjacent cells.</p>
+                <h2>Швидке відкриття (Easy Digging)</h2>
+                <p>Якщо навколо цифри вже стоїть правильна кількість прапорців, натискання на цю цифру автоматично відкриє всі інші закриті клітинки навколо неї.</p>
             </div>
             <div class="info-section">
-                <h2>Easy Flagging</h2>
-                <p>When a revealed number has exactly as many unrevealed neighbors as its value, tapping it will automatically flag all those neighbors.</p>
+                <h2>Швидкі прапорці (Easy Flagging)</h2>
+                <p>Якщо навколо цифри залишилося стільки ж закритих клітинок, яке значення самої цифри, натискання на неї автоматично поставить прапорці на ці клітинки.</p>
             </div>
         </div>
     </div>
