@@ -68,20 +68,18 @@ class GameUI {
         const availW = rect.width  - 32; // account for padding
         const availH = rect.height - 32;
 
-        // Account for 1px gap between cells
-        const gapW = game.cols - 1;
-        const gapH = game.rows - 1;
-
         let cellSize = Math.min(
-            Math.floor((availW - gapW) / game.cols),
-            Math.floor((availH - gapH) / game.rows)
+            Math.floor(availW / game.cols),
+            Math.floor(availH / game.rows)
         );
-        
-        // Remove minimum limit so it always fits the screen (no scrolling)
+        // Ensure it doesn't get ridiculously small, but allow it to fit the screen
+        cellSize = Math.max(cellSize, 10); 
         cellSize = Math.min(cellSize, 44); // maximum for aesthetics
 
         board.style.gridTemplateColumns = `repeat(${game.cols}, ${cellSize}px)`;
         board.style.gridTemplateRows    = `repeat(${game.rows}, ${cellSize}px)`;
+        // Scale font size dynamically with cell size (approx 55% of cell height)
+        board.style.fontSize            = Math.max(8, Math.floor(cellSize * 0.55)) + 'px';
 
         // Adjust alignment for scrollable boards
         const totalW = game.cols * cellSize;
@@ -114,26 +112,6 @@ class GameUI {
         if (!this._boardHandlersSet) {
             this._setupBoardHandlers(board);
             this._boardHandlersSet = true;
-        }
-
-        // Initialize Panzoom
-        if (this.pz) {
-            this.pz.dispose();
-            this.pz = null;
-        }
-        if (typeof panzoom === 'function') {
-            this.pz = panzoom(board, {
-                maxZoom: 5,
-                minZoom: 1,
-                bounds: true,
-                boundsPadding: 0.1,
-                smoothScroll: false,
-                zoomDoubleClickSpeed: 1, // Disable double-click zoom
-                onTouch: function(e) {
-                    // Let our custom touch handlers work!
-                    return false; 
-                }
-            });
         }
 
         // UI reset

@@ -217,8 +217,9 @@ body {
     justify-content: center;
     padding: 16px;
     position: relative;
-    overflow: hidden;
-    touch-action: none;
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-x pan-y pinch-zoom;
 }
 
 .game-board {
@@ -254,7 +255,7 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 18px;
+    font-size: inherit;
     font-weight: 700;
     cursor: pointer;
     position: relative;
@@ -293,16 +294,16 @@ body {
 
 /* Flag icon inside cell */
 .cell .flag-icon {
-    width: 16px;
-    height: 16px;
+    width: 65%;
+    height: 65%;
     fill: currentColor;
     color: #2a2a40;
 }
 
 /* Mine icon inside cell (game over) */
 .cell .mine-icon-small {
-    width: 16px;
-    height: 16px;
+    width: 65%;
+    height: 65%;
 }
 
 /* ========================================
