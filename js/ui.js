@@ -114,6 +114,24 @@ class GameUI {
             this._boardHandlersSet = true;
         }
 
+        if (this.panzoom) {
+            this.panzoom.destroy();
+        }
+        
+        // Save cell size for zoom calculations later
+        this.baseCellSize = cellSize;
+
+        this.panzoom = Panzoom(board, {
+            maxScale: 6,
+            minScale: 1,
+            contain: 'outside',
+            animate: true,
+            canvas: true // better performance
+        });
+        
+        // Allow zooming with mouse wheel (desktop testing)
+        board.parentElement.addEventListener('wheel', this.panzoom.zoomWithWheel);
+
         // UI reset
         document.getElementById('tap-overlay').classList.remove('hidden');
         this.updateTimer(0);
@@ -153,6 +171,7 @@ class GameUI {
 
         board.addEventListener('touchcancel', () => this._cancelLongPress());
         board.addEventListener('touchmove',   () => this._cancelLongPress());
+        board.addEventListener('panzoompan',  () => this._cancelLongPress());
 
         // ── Mouse events ─────────────────────────
         board.addEventListener('mousedown', (e) => {
@@ -294,6 +313,21 @@ class GameUI {
         // Hide "Tap to begin" overlay once the game is running
         if (wasIdle && this.game.state === 'playing') {
             document.getElementById('tap-overlay').classList.add('hidden');
+            
+            // Auto zoom to comfortable size on first tap
+            if (this.panzoom && this.baseCellSize) {
+                const targetScale = Math.max(1, 32 / this.baseCellSize);
+                if (targetScale > 1) {
+                    const el = this.cellElements[row][col];
+                    const rect = el.getBoundingClientRect();
+                    const clientX = rect.left + rect.width / 2;
+                    const clientY = rect.top + rect.height / 2;
+                    
+                    setTimeout(() => {
+                        this.panzoom.zoomToPoint(targetScale, { clientX, clientY }, { animate: true });
+                    }, 50);
+                }
+            }
         }
 
         if (result.hitMine) {
