@@ -679,6 +679,7 @@ class GameUI {
                     row.className = 'lb-row';
                     row.innerHTML = `
                         <span class="lb-rank">#${i + 1}</span>
+                        <span class="lb-name">${rec.name || 'Anonymous'}</span>
                         <span class="lb-time">${this.leaderboard.formatTime(rec.time)}</span>
                         <span class="lb-date">${new Date(rec.date).toLocaleDateString()}</span>
                     `;

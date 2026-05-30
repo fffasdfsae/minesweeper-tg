@@ -515,6 +515,15 @@ body {
     width: 30px;
 }
 
+.lb-name {
+    flex: 1;
+    margin-left: 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding-right: 12px;
+}
+
 .lb-time {
     font-weight: 600;
 }
@@ -522,6 +531,7 @@ body {
 .lb-date {
     color: var(--text-secondary);
     font-size: 13px;
+    margin-left: 16px;
 }
 
 .lb-empty {

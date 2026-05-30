@@ -109,6 +109,7 @@ class App {
 
         document.getElementById('nav-leaderboard').addEventListener('click', () => {
             this.ui.renderLeaderboard();
+            this.leaderboard.onUpdate = () => this.ui.renderLeaderboard();
             this.showScreen('leaderboard');
         });
 
@@ -158,6 +159,11 @@ class App {
         // Stop timer when leaving the game screen
         if (this.currentScreen === 'game' && this.game) {
             this.game.stopTimer();
+        }
+
+        // Stop listening for leaderboard updates when leaving
+        if (this.currentScreen === 'leaderboard') {
+            this.leaderboard.onUpdate = null;
         }
 
         this.showScreen('menu');

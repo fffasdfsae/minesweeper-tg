@@ -1,188 +1,133 @@
 /**
- * Leaderboard Manager
+ * Leaderboard — Global Firebase Storage
  *
- * Tracks and persists the player's best Minesweeper completion
- * times per difficulty. Stores up to 10 records per difficulty,
- * sorted by time ascending (fastest first).
+ * Manages fetching and submitting time records to Firebase Realtime Database.
  */
 
-// localStorage key
-const LEADERBOARD_STORAGE_KEY = 'minesweeper_leaderboard';
+const firebaseConfig = {
+    apiKey: "AIzaSyAI7mjAd1c7Nxj2aetLlwTRqbJv3aeeQ7o",
+    authDomain: "minesweeper-tg-27d6d.firebaseapp.com",
+    projectId: "minesweeper-tg-27d6d",
+    storageBucket: "minesweeper-tg-27d6d.firebasestorage.app",
+    messagingSenderId: "815001768253",
+    appId: "1:815001768253:web:d8d49637702a3edb5bf554",
+    // NOTE: If you get a Firebase error in the console, you may need to uncomment and fix this:
+    databaseURL: "https://minesweeper-tg-27d6d-default-rtdb.europe-west1.firebasedatabase.app"
+};
 
-// ──────────────────────────────────────────────
-// Leaderboard Class
-// ──────────────────────────────────────────────
 class Leaderboard {
-
-    /**
-     * Initialise the leaderboard by loading persisted data.
-     */
     constructor() {
-        /** @type {Object} Records keyed by difficulty */
-        this.data = {
-            easy:    [],
-            medium:  [],
-            hard:    [],
+        // Initialize Firebase
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        this.db = firebase.database();
+        
+        // Cache for rendering
+        this.records = {
+            easy: [],
+            medium: [],
+            hard: [],
             extreme: []
         };
 
-        this.load();
+        // Listen for real-time updates
+        this._listenToDifficulty('easy');
+        this._listenToDifficulty('medium');
+        this._listenToDifficulty('hard');
+        this._listenToDifficulty('extreme');
+        
+        // Let UI know when data updates
+        this.onUpdate = null;
     }
 
-    // ──────────────────────────────────────────
-    // Record Management
-    // ──────────────────────────────────────────
+    /** @private */
+    _listenToDifficulty(diff) {
+        const ref = this.db.ref('leaderboard/' + diff).orderByChild('time').limitToFirst(10);
+        ref.on('value', (snapshot) => {
+            const data = snapshot.val();
+            const list = [];
+            if (data) {
+                // Convert object to array
+                for (let key in data) {
+                    list.push({ id: key, ...data[key] });
+                }
+                // Sort ascending by time
+                list.sort((a, b) => a.time - b.time);
+            }
+            this.records[diff] = list;
+            
+            // Notify UI if we are currently looking at the leaderboard
+            if (this.onUpdate) this.onUpdate();
+        });
+    }
 
     /**
-     * Add a new time record for a given difficulty.
-     *
-     * The record is inserted in sorted order (ascending by time).
-     * Only the top 10 fastest times are kept.
-     *
-     * @param {string} difficulty  - 'easy' | 'medium' | 'hard' | 'extreme'
-     * @param {number} timeSeconds - Completion time in seconds.
-     * @returns {number|null} 1-based rank of the new record, or null if it didn't make top 10.
+     * Get player's name from Telegram SDK or generate a guest name
+     */
+    _getPlayerName() {
+        try {
+            const tg = window.Telegram?.WebApp;
+            if (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) {
+                return tg.initDataUnsafe.user.first_name || 'Anonymous';
+            }
+        } catch(e) {}
+        
+        // Fallback for browser tests
+        let guestName = localStorage.getItem('minesweeper_guest_name');
+        if (!guestName) {
+            guestName = 'Guest_' + Math.floor(Math.random() * 9000 + 1000);
+            localStorage.setItem('minesweeper_guest_name', guestName);
+        }
+        return guestName;
+    }
+
+    /**
+     * Add a new record to the global database
      */
     addRecord(difficulty, timeSeconds) {
-        if (!this.data[difficulty]) {
-            console.warn(`[Leaderboard] Unknown difficulty: "${difficulty}"`);
-            return null;
-        }
-
-        const record = {
+        const playerName = this._getPlayerName();
+        
+        const newRecord = {
+            name: playerName,
             time: timeSeconds,
             date: new Date().toISOString()
         };
 
-        const records = this.data[difficulty];
+        // Push to Firebase
+        const ref = this.db.ref('leaderboard/' + difficulty);
+        ref.push(newRecord);
 
-        // Find the insertion index (keep ascending order by time)
-        let insertIndex = records.length;
-        for (let i = 0; i < records.length; i++) {
-            if (timeSeconds < records[i].time) {
-                insertIndex = i;
-                break;
-            }
-        }
-
-        // If the list is already full and the new time is slower than all, skip
-        if (insertIndex >= 10) {
-            return null;
-        }
-
-        // Insert and trim to 10
-        records.splice(insertIndex, 0, record);
-        if (records.length > 10) {
-            records.length = 10; // keep only top 10
-        }
-
-        this.save();
-
-        // Return 1-based rank
-        return insertIndex + 1;
+        // We can't immediately return a rank since it's async, 
+        // so we'll just return null for the success dialog.
+        return null;
     }
 
     /**
-     * Get all records for a difficulty, sorted by time ascending.
-     * @param {string} difficulty
-     * @returns {Array<{time: number, date: string}>}
+     * Get cached records for a difficulty
      */
     getRecords(difficulty) {
-        return (this.data[difficulty] || []).slice(); // return a copy
+        return this.records[difficulty] || [];
     }
 
     /**
-     * Get the best (fastest) time for a difficulty.
-     * @param {string} difficulty
-     * @returns {number|null} Best time in seconds, or null if no records.
-     */
-    getBestTime(difficulty) {
-        const records = this.data[difficulty];
-        if (!records || records.length === 0) return null;
-        return records[0].time;
-    }
-
-    /**
-     * Clear records for a specific difficulty, or all difficulties.
-     * @param {string} [difficulty] - If omitted, clears everything.
-     */
-    clearRecords(difficulty) {
-        if (difficulty) {
-            if (this.data[difficulty]) {
-                this.data[difficulty] = [];
-            }
-        } else {
-            // Clear all
-            for (const key of Object.keys(this.data)) {
-                this.data[key] = [];
-            }
-        }
-        this.save();
-    }
-
-    // ──────────────────────────────────────────
-    // Formatting
-    // ──────────────────────────────────────────
-
-    /**
-     * Format a time value into a human-readable string.
-     * - Under 60 seconds: '45S'
-     * - 60 seconds or more: '1:23'
-     *
-     * @param {number} seconds - Time in seconds.
-     * @returns {string} Formatted time string.
+     * Format time (e.g. 1:23)
      */
     formatTime(seconds) {
-        if (seconds < 60) {
-            return `${seconds}S`;
+        const m = Math.floor(seconds / 60);
+        const s = seconds % 60;
+        if (m > 0) {
+            return `${m}:${s.toString().padStart(2, '0')}`;
         }
-
-        const mins = Math.floor(seconds / 60);
-        const secs = seconds % 60;
-        // Pad seconds to two digits
-        return `${mins}:${secs.toString().padStart(2, '0')}`;
-    }
-
-    // ──────────────────────────────────────────
-    // Persistence
-    // ──────────────────────────────────────────
-
-    /**
-     * Save current leaderboard data to localStorage.
-     * @private
-     */
-    save() {
-        try {
-            localStorage.setItem(LEADERBOARD_STORAGE_KEY, JSON.stringify(this.data));
-        } catch (e) {
-            console.warn('[Leaderboard] Failed to save:', e);
-        }
+        return `${s}S`;
     }
 
     /**
-     * Load leaderboard data from localStorage.
-     * Missing difficulties are initialised to empty arrays.
-     * @private
+     * Clear records (Disabled for global DB)
      */
-    load() {
-        try {
-            const raw = localStorage.getItem(LEADERBOARD_STORAGE_KEY);
-            if (raw) {
-                const saved = JSON.parse(raw);
-                // Merge, preserving the expected structure
-                for (const key of Object.keys(this.data)) {
-                    if (Array.isArray(saved[key])) {
-                        this.data[key] = saved[key];
-                    }
-                }
-            }
-        } catch (e) {
-            console.warn('[Leaderboard] Failed to load, starting fresh:', e);
-        }
+    clearRecords() {
+        alert("Глобальний лідерборд не можна очистити з клієнта!");
     }
 }
 
-// ──────────────────────────────────────────────
-// Expose to global scope
-// ──────────────────────────────────────────────
 window.Leaderboard = Leaderboard;
