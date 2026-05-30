@@ -14,7 +14,7 @@ const DEFAULT_SETTINGS = {
     showActionToggle:  false,       // Show the dig/flag toggle button
     defaultAction:     'dig',       // 'dig' or 'flag'
     longPress:         true,        // Enable long-press for secondary action
-    longPressDelay:    100,         // Long-press threshold in ms (100–500)
+    longPressDelay:    300,         // Long-press threshold in ms (100–500)
     easyDigging:       true,        // Auto-reveal when flags match number
     easyFlagging:      true,        // Auto-flag when closed cells match number
     animationSpeed:    50,          // Animation speed percentage (0–150)

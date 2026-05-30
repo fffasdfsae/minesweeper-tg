@@ -135,14 +135,17 @@ class GameUI {
         board.addEventListener('touchstart', (e) => {
             const c = getCell(e);
             if (!c) return;
-            e.preventDefault();
+            this._isTouch = true;
             this._onPointerDown(c.row, c.col);
-        }, { passive: false });
+        }, { passive: true });
 
         board.addEventListener('touchend', (e) => {
             const c = getCell(e);
             if (c) this._onPointerUp(c.row, c.col);
             else   this._cancelLongPress();
+            
+            // Ignore synthetic mouse events fired after touch
+            setTimeout(() => { this._isTouch = false; }, 300);
         });
 
         board.addEventListener('touchcancel', () => this._cancelLongPress());
@@ -150,13 +153,14 @@ class GameUI {
 
         // ── Mouse events ─────────────────────────
         board.addEventListener('mousedown', (e) => {
-            if (e.button !== 0) return;
+            if (this._isTouch || e.button !== 0) return;
             const c = getCell(e);
             if (!c) return;
             this._onPointerDown(c.row, c.col);
         });
 
         board.addEventListener('mouseup', (e) => {
+            if (this._isTouch || e.button !== 0) return;
             const c = getCell(e);
             if (c) this._onPointerUp(c.row, c.col);
             else   this._cancelLongPress();
