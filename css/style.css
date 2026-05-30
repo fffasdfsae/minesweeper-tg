@@ -226,6 +226,8 @@ body {
     border-radius: 12px;
     overflow: hidden;
     position: relative;
+    gap: 1px;
+    background-color: var(--bg-primary);
 }
 
 .tap-overlay {
@@ -265,8 +267,6 @@ body {
     background: var(--cell-opened);
     color: var(--text-primary);
     cursor: default;
-    border-right: 1px dashed var(--border-dashed);
-    border-bottom: 1px dashed var(--border-dashed);
 }
 
 .cell.revealed.empty {
