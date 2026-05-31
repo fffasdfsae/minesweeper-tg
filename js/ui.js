@@ -104,10 +104,9 @@ class GameUI {
         board.innerHTML = '';
         this.cellElements = [];
 
-        // Dynamic viewport dimensions
-        const rect   = wrapper.getBoundingClientRect();
-        const availW = rect.width  - 32;
-        const availH = rect.height - 32;
+        // Use window size because wrapper might not be laid out / visible yet during creation
+        const availW = window.innerWidth - 32;
+        const availH = window.innerHeight - 176; // Subtract header (56px) + footer controls (88px) + padding (32px)
 
         // Comfortable fixed cell size matching screenshot proportions
         const cellSize = 34;
