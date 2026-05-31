@@ -3,11 +3,10 @@
  *
  * Handles all visual aspects of the Minesweeper game:
  *  - Board creation and cell rendering
- *  - Touch / click / long-press handling
- *  - Settings page generation
- *  - Leaderboard display
- *  - Action toggle (dig / flag)
- *  - Game-over animations and dialogs
+ *  - Touch / click / long-press handling with drag lock
+ *  - Settings page generation (circular toggles)
+ *  - Leaderboard display (difficulty switcher, deletes)
+ *  - Theme switching (Clean Blue, Dark, Forest Green, Sunset)
  */
 
 class GameUI {
@@ -32,8 +31,20 @@ class GameUI {
         this._touchStartRow = -1;
         this._touchStartCol = -1;
 
+        // Drag/Pan detection coordinates
+        this._startX = undefined;
+        this._startY = undefined;
+        this._hasMoved = false;
+
         // Flag to prevent duplicate event listener registration
         this._boardHandlersSet = false;
+
+        // Preset themes
+        this.themes = ['theme-clean-blue', 'theme-dark', 'theme-green', 'theme-sunset'];
+        this.currentThemeIndex = 0;
+
+        // Leaderboard active screen state
+        this.currentLeaderboardDiffIndex = 0;
     }
 
     /**
@@ -46,6 +57,36 @@ class GameUI {
         this.renderSettings();
         this.renderLeaderboard();
         this._setupActionToggle();
+
+        // Load theme from cache
+        const savedTheme = localStorage.getItem('minesweeper_theme') || 'theme-clean-blue';
+        this.currentThemeIndex = this.themes.indexOf(savedTheme);
+        if (this.currentThemeIndex === -1) this.currentThemeIndex = 0;
+        document.body.className = this.themes[this.currentThemeIndex];
+
+        // Wire palette buttons
+        document.querySelectorAll('.theme-palette-btn').forEach(btn => {
+            btn.addEventListener('click', () => this.cycleTheme());
+        });
+
+        // Wire game footer actions
+        document.getElementById('game-footer-back').addEventListener('click', () => {
+            window.app?.showScreen('menu');
+        });
+        document.getElementById('game-restart-btn').addEventListener('click', () => {
+            window.app?.startNewGame();
+        });
+    }
+
+    /**
+     * Cycle preset themes
+     */
+    cycleTheme() {
+        document.body.classList.remove(this.themes[this.currentThemeIndex]);
+        this.currentThemeIndex = (this.currentThemeIndex + 1) % this.themes.length;
+        document.body.classList.add(this.themes[this.currentThemeIndex]);
+        localStorage.setItem('minesweeper_theme', this.themes[this.currentThemeIndex]);
+        this.renderSettings(); // redraw to match range slider colors
     }
 
     // ════════════════════════════════════════════
@@ -63,39 +104,27 @@ class GameUI {
         board.innerHTML = '';
         this.cellElements = [];
 
-        // ── Calculate cell size ──────────────────
+        // Dynamic viewport dimensions
         const rect   = wrapper.getBoundingClientRect();
-        const availW = rect.width  - 32; // account for padding
+        const availW = rect.width  - 32;
         const availH = rect.height - 32;
 
-        let cellSize = Math.min(
-            Math.floor(availW / game.cols),
-            Math.floor(availH / game.rows)
-        );
-        // Ensure it doesn't get ridiculously small, but allow it to fit the screen
-        cellSize = Math.max(cellSize, 10); 
-        cellSize = Math.min(cellSize, 44); // maximum for aesthetics
+        // Comfortable fixed cell size matching screenshot proportions
+        const cellSize = 34;
+        this.baseCellSize = cellSize;
 
         board.style.gridTemplateColumns = `repeat(${game.cols}, ${cellSize}px)`;
         board.style.gridTemplateRows    = `repeat(${game.rows}, ${cellSize}px)`;
-        // Scale font size dynamically with cell size (approx 55% of cell height)
-        board.style.fontSize            = Math.max(8, Math.floor(cellSize * 0.55)) + 'px';
+        board.style.fontSize            = '18px';
 
-        // Adjust alignment for scrollable boards
-        const totalW = game.cols * cellSize;
-        const totalH = game.rows * cellSize;
-        if (totalW > availW || totalH > availH) {
-            wrapper.style.alignItems     = 'flex-start';
-            wrapper.style.justifyContent = 'flex-start';
-        } else {
-            wrapper.style.alignItems     = 'center';
-            wrapper.style.justifyContent = 'center';
-        }
+        // Symmetrical centering in parent wrapper via flexbox
+        wrapper.style.alignItems     = 'center';
+        wrapper.style.justifyContent = 'center';
 
-        // Cell-borders setting
+        // Cell borders dashed setting
         board.classList.toggle('board-borders', this.settings.get('cellBorders'));
 
-        // ── Create cell elements ─────────────────
+        // Generate cells
         for (let r = 0; r < game.rows; r++) {
             this.cellElements[r] = [];
             for (let c = 0; c < game.cols; c++) {
@@ -117,23 +146,44 @@ class GameUI {
         if (this.panzoom) {
             this.panzoom.destroy();
         }
-        
-        // Save cell size for zoom calculations later
-        this.baseCellSize = cellSize;
 
+        // Calculate fit scale to show the entire board at launch
+        const boardW = game.cols * cellSize;
+        const boardH = game.rows * cellSize;
+        const fitScaleX = availW / boardW;
+        const fitScaleY = availH / boardH;
+        const fitScale = Math.min(fitScaleX, fitScaleY);
+        const startScale = Math.min(1.0, fitScale);
+        this.fitScale = startScale;
+
+        // Initialize Panzoom
         this.panzoom = Panzoom(board, {
-            maxScale: 6,
-            minScale: 0.5,
-            contain: 'outside',
+            maxScale: 5,
+            minScale: startScale * 0.8,
+            contain: startScale >= 1.0 ? 'outside' : 'none',
             animate: true,
-            canvas: true, // better performance
-            step: 0.5 // faster zoom
+            canvas: true,
+            startScale: startScale
         });
-        
-        // Allow zooming with mouse wheel (desktop testing)
+
+        // Wheel zoom for desktop testing
         board.parentElement.addEventListener('wheel', this.panzoom.zoomWithWheel);
 
-        // UI reset
+        // Dynamic containment during zoom
+        board.addEventListener('panzoomzoom', (e) => {
+            const { scale } = e.detail;
+            const enableContain = (scale * boardW >= availW) && (scale * boardH >= availH);
+            this.panzoom.setOptions({ contain: enableContain ? 'outside' : 'none' });
+        });
+
+        // Symmetrically center at 0,0 translate
+        this.panzoom.pan(0, 0, { animate: false });
+
+        // Update difficulty indicators in game footer
+        document.getElementById('game-difficulty-label').textContent = 
+            window.app ? window.app.diffLabels[game.difficulty] : game.difficulty;
+
+        // Reset UI triggers
         document.getElementById('tap-overlay').classList.remove('hidden');
         this.updateTimer(0);
         this._updateActionToggleVisibility();
@@ -142,7 +192,7 @@ class GameUI {
     }
 
     // ════════════════════════════════════════════
-    //  Board Interaction Handlers
+    //  Board Interaction Handlers (with Drag Lock)
     // ════════════════════════════════════════════
 
     /** @private */
@@ -153,48 +203,84 @@ class GameUI {
             return { row: parseInt(el.dataset.row), col: parseInt(el.dataset.col) };
         };
 
+        const getCoords = (e) => {
+            if (e.touches && e.touches.length > 0) {
+                return { x: e.touches[0].clientX, y: e.touches[0].clientY };
+            }
+            return { x: e.clientX, y: e.clientY };
+        };
+
         // ── Touch events ─────────────────────────
         board.addEventListener('touchstart', (e) => {
             const c = getCell(e);
             if (!c) return;
             this._isTouch = true;
+
+            const coords = getCoords(e);
+            this._startX = coords.x;
+            this._startY = coords.y;
+            this._hasMoved = false;
+
             this._onPointerDown(c.row, c.col);
+        }, { passive: true });
+
+        board.addEventListener('touchmove', (e) => {
+            if (this._startX !== undefined && this._startY !== undefined) {
+                const coords = getCoords(e);
+                const dx = coords.x - this._startX;
+                const dy = coords.y - this._startY;
+                if (Math.hypot(dx, dy) > 8) {
+                    this._hasMoved = true;
+                    this._cancelLongPress();
+                }
+            }
         }, { passive: true });
 
         board.addEventListener('touchend', (e) => {
             const c = getCell(e);
-            if (c) this._onPointerUp(c.row, c.col);
-            else   this._cancelLongPress();
-            
-            // Ignore synthetic mouse events fired after touch
+            if (c && !this._hasMoved) {
+                this._onPointerUp(c.row, c.col);
+            } else {
+                this._cancelLongPress();
+            }
             setTimeout(() => { this._isTouch = false; }, 300);
         });
 
         board.addEventListener('touchcancel', () => this._cancelLongPress());
-        board.addEventListener('touchmove',   () => this._cancelLongPress());
-        
-        board.addEventListener('panzoomchange', () => {
-            this._isDragging = true;
-            this._cancelLongPress();
-        });
-        board.addEventListener('panzoomend', () => {
-            // Short delay to prevent click after drag
-            setTimeout(() => { this._isDragging = false; }, 50);
-        });
 
         // ── Mouse events ─────────────────────────
         board.addEventListener('mousedown', (e) => {
             if (this._isTouch || e.button !== 0) return;
             const c = getCell(e);
             if (!c) return;
+
+            this._startX = e.clientX;
+            this._startY = e.clientY;
+            this._hasMoved = false;
+
             this._onPointerDown(c.row, c.col);
+        });
+
+        board.addEventListener('mousemove', (e) => {
+            if (this._isTouch) return;
+            if (this._startX !== undefined && this._startY !== undefined) {
+                const dx = e.clientX - this._startX;
+                const dy = e.clientY - this._startY;
+                if (Math.hypot(dx, dy) > 8) {
+                    this._hasMoved = true;
+                    this._cancelLongPress();
+                }
+            }
         });
 
         board.addEventListener('mouseup', (e) => {
             if (this._isTouch || e.button !== 0) return;
             const c = getCell(e);
-            if (c) this._onPointerUp(c.row, c.col);
-            else   this._cancelLongPress();
+            if (c && !this._hasMoved) {
+                this._onPointerUp(c.row, c.col);
+            } else {
+                this._cancelLongPress();
+            }
         });
 
         board.addEventListener('mouseleave', () => this._cancelLongPress());
@@ -203,7 +289,7 @@ class GameUI {
         board.addEventListener('contextmenu', (e) => {
             e.preventDefault();
             const c = getCell(e);
-            if (c) this._doFlag(c.row, c.col);
+            if (c && !this._hasMoved) this._doFlag(c.row, c.col);
         });
     }
 
@@ -226,8 +312,6 @@ class GameUI {
     /** @private */
     _onPointerUp(row, col) {
         this._cancelLongPress();
-        if (this._isDragging) return; // Ignore if it was a drag/pan/zoom
-        
         if (!this._longPressFired &&
             row === this._touchStartRow &&
             col === this._touchStartCol) {
@@ -259,7 +343,6 @@ class GameUI {
             if (this.settings.get('easyDigging')) {
                 const res = this.game.easyDig(row, col);
                 if (res.hitMine) {
-                    // Find which mine exploded (first unflagged mine neighbour)
                     let hitR, hitC;
                     this.game.forEachNeighbor(row, col, (nr, nc) => {
                         if (hitR !== undefined) return;
@@ -285,7 +368,7 @@ class GameUI {
                     return;
                 }
             }
-            return; // Already revealed — nothing more to do
+            return;
         }
 
         // ── Unrevealed cell → current action mode ──
@@ -302,9 +385,8 @@ class GameUI {
     _handleSecondaryAction(row, col) {
         if (!this.game || this.game.state === 'won' || this.game.state === 'lost') return;
         const cell = this.game.board[row][col];
-        if (cell.revealed) return; // long-press on revealed cell does nothing
+        if (cell.revealed) return;
 
-        // Opposite of current action
         if (this.currentAction === 'dig') {
             this._doFlag(row, col);
         } else {
@@ -321,23 +403,28 @@ class GameUI {
         const wasIdle = this.game.state === 'idle';
         const result  = this.game.reveal(row, col);
 
-        // Hide "Tap to begin" overlay once the game is running
         if (wasIdle && this.game.state === 'playing') {
             document.getElementById('tap-overlay').classList.add('hidden');
-            
-            // Auto zoom to comfortable size on first tap
-            if (this.panzoom && this.baseCellSize) {
-                const targetScale = Math.max(1, 32 / this.baseCellSize);
-                if (targetScale > 1) {
-                    const el = this.cellElements[row][col];
-                    const rect = el.getBoundingClientRect();
-                    const clientX = rect.left + rect.width / 2;
-                    const clientY = rect.top + rect.height / 2;
-                    
-                    setTimeout(() => {
-                        this.panzoom.zoomToPoint(targetScale, { clientX, clientY }, { animate: true });
-                    }, 50);
-                }
+            this._updateActionToggleVisibility(); // hides restart button, shows toggle if needed
+
+            // Smooth zoom to cell on first tap
+            if (this.panzoom && this.fitScale && this.fitScale < 0.9) {
+                const targetScale = 1.0;
+                const boardW = this.game.cols * this.baseCellSize;
+                const boardH = this.game.rows * this.baseCellSize;
+                
+                // Centering formulas
+                const cellX = col * this.baseCellSize + this.baseCellSize / 2;
+                const cellY = row * this.baseCellSize + this.baseCellSize / 2;
+                const dx = cellX - boardW / 2;
+                const dy = cellY - boardH / 2;
+                const panX = -dx * targetScale;
+                const panY = -dy * targetScale;
+
+                setTimeout(() => {
+                    this.panzoom.zoom(targetScale, { animate: true });
+                    this.panzoom.pan(panX, panY, { animate: true });
+                }, 50);
             }
         }
 
@@ -359,6 +446,7 @@ class GameUI {
 
         if (wasIdle && this.game.state === 'playing') {
             document.getElementById('tap-overlay').classList.add('hidden');
+            this._updateActionToggleVisibility();
         }
 
         this._updateCell(row, col);
@@ -374,7 +462,6 @@ class GameUI {
         const cell = this.game.board[row][col];
         const el   = this.cellElements[row][col];
 
-        // Reset
         el.className = 'cell';
         el.innerHTML = '';
 
@@ -429,7 +516,6 @@ class GameUI {
 
     /** @private  Chain-reveal all mines on game over. */
     _showAllMines(triggerRow, triggerCol) {
-        // Mark the triggered mine red
         if (triggerRow !== undefined && triggerCol !== undefined) {
             const el = this.cellElements[triggerRow][triggerCol];
             el.className = 'cell mine-exploded';
@@ -438,7 +524,6 @@ class GameUI {
 
         const mines = this.game.getAllMines();
 
-        // Sort by Manhattan distance from trigger for chain effect
         if (triggerRow !== undefined) {
             mines.sort((a, b) => {
                 const dA = Math.abs(a.row - triggerRow) + Math.abs(a.col - triggerCol);
@@ -448,7 +533,7 @@ class GameUI {
         }
 
         mines.forEach((m, i) => {
-            if (m.row === triggerRow && m.col === triggerCol) return; // already shown
+            if (m.row === triggerRow && m.col === triggerCol) return;
             setTimeout(() => {
                 const el = this.cellElements[m.row][m.col];
                 el.className = 'cell mine-revealed';
@@ -463,6 +548,12 @@ class GameUI {
 
     /** @private */
     _handleGameEnd(won) {
+        // Stop timer
+        if (this.game) this.game.stopTimer();
+
+        // Restore menu restart button, hide actions
+        this._updateActionToggleVisibility();
+
         if (won) {
             const rank = this.leaderboard.addRecord(this.game.difficulty, this.game.timer);
             if (this.settings.get('vibration')) this._haptic('success');
@@ -489,13 +580,6 @@ class GameUI {
             const tg = window.Telegram?.WebApp;
             if (tg && typeof tg.showPopup === 'function') {
                 const buttons = [];
-                if (isWin && this.leaderboard) {
-                    buttons.push({
-                        id: 'submit_score',
-                        type: 'default',
-                        text: 'Зберегти результат'
-                    });
-                }
                 buttons.push({
                     id: 'play_again',
                     type: isWin ? 'ok' : 'destructive',
@@ -526,18 +610,21 @@ class GameUI {
         overlay.style.cssText = `
             position:fixed; inset:0; background:rgba(0,0,0,0.7);
             display:flex; align-items:center; justify-content:center;
-            z-index:1000; animation:fadeIn 0.25s ease-out;
+            z-index:1000;
         `;
 
         const modal = document.createElement('div');
+        modal.className = 'modal-content';
         modal.style.cssText = `
             background: var(--bg-secondary, #252540);
-            border-radius: 16px; padding: 28px 24px;
+            border-radius: 20px; padding: 28px 24px;
             text-align: center; max-width: 300px; width: 90%;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+            border: 1px solid var(--border-color);
         `;
 
         const h = document.createElement('h2');
-        h.style.cssText = 'margin:0 0 12px; font-size:22px;';
+        h.style.cssText = 'margin:0 0 12px; font-size:22px; font-weight:700;';
         h.textContent = title;
 
         const p = document.createElement('p');
@@ -550,17 +637,21 @@ class GameUI {
         const btns = document.createElement('div');
         btns.style.cssText = 'display:flex; gap:12px;';
 
-        const makeBtn = (text, onClick) => {
+        const makeBtn = (text, isOk, onClick) => {
             const b = document.createElement('button');
             b.className = 'btn-outlined';
-            b.style.cssText = 'flex:1; padding:12px; border-radius:24px;';
+            b.style.cssText = `
+                flex:1; padding:12px; border-radius:24px; font-size:14px;
+                border-color: ${isOk ? 'var(--accent)' : 'var(--btn-outline-border)'};
+                color: ${isOk ? 'var(--accent)' : 'var(--text-primary)'};
+            `;
             b.textContent = text;
             b.addEventListener('click', () => { overlay.remove(); onClick(); });
             return b;
         };
 
-        btns.appendChild(makeBtn(isWin ? 'Грати знову' : 'Спробувати ще', () => window.app?.startNewGame()));
-        btns.appendChild(makeBtn('Меню',     () => window.app?.showScreen('menu')));
+        btns.appendChild(makeBtn(isWin ? 'Грати знову' : 'Спробувати ще', true, () => window.app?.startNewGame()));
+        btns.appendChild(makeBtn('Меню', false, () => window.app?.showScreen('menu')));
 
         modal.append(h, p, btns);
         overlay.appendChild(modal);
@@ -577,10 +668,10 @@ class GameUI {
         container.innerHTML = '';
 
         const configs = [
-            { key: 'cellBorders',       title: 'Межі клітинок',       desc: 'Показувати межі між закритими клітинками.',                                                                                                                    type: 'toggle'  },
+            { key: 'cellBorders',       title: 'Межі клітинок',       desc: 'Показувати пунктирні межі між закритими клітинками.',                                                                                                                    type: 'toggle'  },
             { key: 'showActionToggle',  title: 'Кнопки дій',          desc: 'Показувати перемикач Копати/Прапорець внизу екрану.', type: 'toggle'  },
             { key: 'defaultAction',     title: 'Дія за замовчуванням',desc: 'Що відбувається при звичайному кліку (копати чи ставити прапорець).',                                                                                                    type: 'action'  },
-            { key: 'longPress',         title: 'Довге натискання',    desc: 'Використовувати довге натискання для альтернативної дії.\n\nЯкщо вимкнено, кнопки дій внизу будуть показуватись примусово.',                                                  type: 'toggle'  },
+            { key: 'longPress',         title: 'Довге натискання',    desc: 'Використовувати довге натискання для альтернативної дії. Якщо вимкнено, кнопки дій внизу будуть показуватись примусово.',                                                  type: 'toggle'  },
             { key: 'longPressDelay',    title: 'Затримка довгого кліку',desc: 'Час у мілісекундах для спрацьовування довгого натискання.', type: 'slider', min: 100, max: 500, step: 10, unit: 'ms' },
             { key: 'easyDigging',       title: 'Швидке відкриття',    desc: 'Натискання на цифру відкриє сусідні клітинки, якщо навколо вже стоять прапорці.',  type: 'toggle'  },
             { key: 'easyFlagging',      title: 'Швидкі прапорці',     desc: 'Натискання на цифру поставить прапорці на всі сусідні закриті клітинки, якщо їх кількість збігається.',     type: 'toggle'  },
@@ -624,13 +715,13 @@ class GameUI {
         btn.className = 'toggle-btn';
         const isOn = this.settings.get(key);
         btn.classList.toggle('on', isOn);
-        btn.textContent = isOn ? 'ON' : 'OFF';
+        btn.textContent = isOn ? 'УВІМК' : 'ВИМК';
 
         btn.addEventListener('click', () => {
             const newVal = !this.settings.get(key);
             this.settings.set(key, newVal);
             btn.classList.toggle('on', newVal);
-            btn.textContent = newVal ? 'ON' : 'OFF';
+            btn.textContent = newVal ? 'УВІМК' : 'ВИМК';
         });
         return btn;
     }
@@ -657,8 +748,11 @@ class GameUI {
 
         const updateTrack = () => {
             const pct = ((input.value - min) / (max - min)) * 100;
+            // Matches accent color dynamically
+            const activeColor = getComputedStyle(document.body).getPropertyValue('--accent').trim();
+            const trackColor = 'var(--btn-outline-border)';
             input.style.background =
-                `linear-gradient(to right, #9da4c7 0%, #9da4c7 ${pct}%, #5a5a70 ${pct}%, #5a5a70 100%)`;
+                `linear-gradient(to right, ${activeColor} 0%, ${activeColor} ${pct}%, ${trackColor} ${pct}%, ${trackColor} 100%)`;
         };
         updateTrack();
 
@@ -708,7 +802,7 @@ class GameUI {
     }
 
     // ════════════════════════════════════════════
-    //  Leaderboard Page
+    //  Leaderboard / Times Page
     // ════════════════════════════════════════════
 
     /** Render the leaderboard into #leaderboard-content. */
@@ -717,57 +811,93 @@ class GameUI {
         container.innerHTML = '';
 
         const diffs  = ['easy', 'medium', 'hard', 'extreme'];
-        const labels = { easy: 'Easy', medium: 'Medium', hard: 'Hard', extreme: 'Extreme' };
+        const labels = { easy: 'Легко', medium: 'Середньо', hard: 'Складно', extreme: 'Екстрим' };
+        const activeDiff = diffs[this.currentLeaderboardDiffIndex];
 
-        diffs.forEach(d => {
-            const section = document.createElement('div');
-            section.className = 'lb-difficulty-section';
+        // Symmetrical difficulty row switcher
+        const switcherRow = document.createElement('div');
+        switcherRow.className = 'lb-difficulty-title-row';
 
-            const title = document.createElement('div');
-            title.className   = 'lb-difficulty-title';
-            title.textContent = labels[d];
-            section.appendChild(title);
-
-            const records = this.leaderboard.getRecords(d);
-
-            if (!records.length) {
-                const empty = document.createElement('div');
-                empty.className   = 'lb-empty';
-                empty.textContent = 'No records yet';
-                section.appendChild(empty);
-            } else {
-                const table = document.createElement('div');
-                table.className = 'lb-table';
-                records.forEach((rec, i) => {
-                    const row = document.createElement('div');
-                    row.className = 'lb-row';
-                    row.innerHTML = `
-                        <span class="lb-rank">#${i + 1}</span>
-                        <span class="lb-name">${rec.name || 'Anonymous'}</span>
-                        <span class="lb-time">${this.leaderboard.formatTime(rec.time)}</span>
-                        <span class="lb-date">${new Date(rec.date).toLocaleDateString()}</span>
-                    `;
-                    table.appendChild(row);
-                });
-                section.appendChild(table);
-            }
-
-            container.appendChild(section);
-        });
-
-        // Clear button
-        const clearWrap = document.createElement('div');
-        clearWrap.style.cssText = 'text-align:center; margin-top:20px; padding-bottom:20px;';
-        const clearBtn = document.createElement('button');
-        clearBtn.className   = 'btn-outlined';
-        clearBtn.style.cssText = 'max-width:200px;';
-        clearBtn.textContent = 'Clear All';
-        clearBtn.addEventListener('click', () => {
-            this.leaderboard.clearRecords();
+        const prevBtn = document.createElement('button');
+        prevBtn.className = 'nav-arrow';
+        prevBtn.innerHTML = `
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="15 18 9 12 15 6"></polyline>
+            </svg>
+        `;
+        prevBtn.addEventListener('click', () => {
+            this.currentLeaderboardDiffIndex = 
+                (this.currentLeaderboardDiffIndex - 1 + diffs.length) % diffs.length;
             this.renderLeaderboard();
         });
-        clearWrap.appendChild(clearBtn);
-        container.appendChild(clearWrap);
+
+        const diffTitle = document.createElement('span');
+        diffTitle.className = 'difficulty-name';
+        diffTitle.textContent = labels[activeDiff];
+
+        const nextBtn = document.createElement('button');
+        nextBtn.className = 'nav-arrow';
+        nextBtn.innerHTML = `
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="9 18 15 12 9 6"></polyline>
+            </svg>
+        `;
+        nextBtn.addEventListener('click', () => {
+            this.currentLeaderboardDiffIndex = 
+                (this.currentLeaderboardDiffIndex + 1) % diffs.length;
+            this.renderLeaderboard();
+        });
+
+        switcherRow.append(prevBtn, diffTitle, nextBtn);
+        container.appendChild(switcherRow);
+
+        // Fetch records
+        const records = this.leaderboard.getRecords(activeDiff);
+
+        if (!records.length) {
+            const empty = document.createElement('div');
+            empty.className   = 'lb-empty';
+            empty.textContent = 'Результатів поки немає';
+            container.appendChild(empty);
+        } else {
+            const table = document.createElement('div');
+            table.className = 'lb-table';
+            records.forEach((rec, i) => {
+                const row = document.createElement('div');
+                row.className = 'lb-row';
+                
+                // Rank & Name, Date left, Time & Trash right
+                row.innerHTML = `
+                    <div class="lb-left">
+                        <span class="lb-rank-name">${i + 1}. ${rec.name || 'Анонім'}</span>
+                        <span class="lb-date">${new Date(rec.date).toLocaleDateString('uk-UA')}</span>
+                    </div>
+                    <div class="lb-right">
+                        <span class="lb-time">${this.leaderboard.formatTime(rec.time)}</span>
+                        <button class="lb-delete-btn" data-id="${rec.id}" aria-label="Видалити результат">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="3 6 5 6 21 6"></polyline>
+                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                <line x1="10" y1="11" x2="10" y2="17"></line>
+                                <line x1="14" y1="11" x2="14" y2="17"></line>
+                            </svg>
+                        </button>
+                    </div>
+                `;
+                table.appendChild(row);
+            });
+            container.appendChild(table);
+
+            // Wire delete events
+            container.querySelectorAll('.lb-delete-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const recordId = btn.dataset.id;
+                    if (confirm("Ви дійсно хочете видалити цей результат?")) {
+                        this.leaderboard.removeRecord(activeDiff, recordId);
+                    }
+                });
+            });
+        }
     }
 
     // ════════════════════════════════════════════
@@ -794,8 +924,18 @@ class GameUI {
 
     /** Update visibility of the action toggle bar. */
     _updateActionToggleVisibility() {
-        const show = this.settings.get('showActionToggle') || !this.settings.get('longPress');
-        document.getElementById('action-toggle-container').style.display = show ? 'flex' : 'none';
+        const isPlaying = this.game && this.game.state === 'playing';
+        const toggleContainer = document.getElementById('action-toggle-container');
+        const gameFooter = document.getElementById('game-footer');
+
+        if (isPlaying) {
+            const showToggle = this.settings.get('showActionToggle') || !this.settings.get('longPress');
+            toggleContainer.style.display = showToggle ? 'flex' : 'none';
+            gameFooter.style.display = 'none';
+        } else {
+            toggleContainer.style.display = 'none';
+            gameFooter.style.display = 'flex';
+        }
     }
 
     // ════════════════════════════════════════════
@@ -818,12 +958,27 @@ class GameUI {
     // ── SVG snippets ──────────────────────────
 
     /** @private */ _flagIconHTML()  { return '<svg class="flag-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M5 21V3l12 7-12 7z"/></svg>'; }
-    /** @private */ _mineIconHTML()  { return '<svg class="mine-icon-small" viewBox="0 0 120 120" fill="var(--text-primary,#fff)"><circle cx="60" cy="60" r="30"/><rect x="52" y="15" width="16" height="16" rx="4"/><rect x="52" y="89" width="16" height="16" rx="4"/><rect x="15" y="52" width="16" height="16" rx="4"/><rect x="89" y="52" width="16" height="16" rx="4"/></svg>'; }
-    /** @private */ _mineIconSVG()   { return '<svg width="24" height="24" viewBox="0 0 120 120" fill="currentColor"><circle cx="60" cy="60" r="30"/><rect x="52" y="15" width="16" height="16" rx="4"/><rect x="52" y="89" width="16" height="16" rx="4"/><rect x="15" y="52" width="16" height="16" rx="4"/><rect x="89" y="52" width="16" height="16" rx="4"/></svg>'; }
-    /** @private */ _flagIconSVG()   { return '<svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M5 21V3"/><path d="M5 3l12 7-12 7z"/></svg>'; }
+    
+    /** @private */ _mineIconHTML() { 
+        return `
+        <svg class="mine-icon-small" viewBox="0 0 24 24" fill="currentColor">
+            <circle cx="12" cy="12" r="5"/>
+            <path d="M12 2v4M12 18v4M2 12h4M18 12h4M5 5l2.8 2.8M16.2 16.2L19 19M5 19l2.8-2.8M16.2 7.8L19 5" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+        </svg>
+        `;
+    }
+
+    /** @private */ _mineIconSVG() { 
+        return `
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+            <circle cx="12" cy="12" r="5"/>
+            <path d="M12 2v4M12 18v4M2 12h4M18 12h4M5 5l2.8 2.8M16.2 16.2L19 19M5 19l2.8-2.8M16.2 7.8L19 5" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+        </svg>
+        `;
+    }
+
+    /** @private */ _flagIconSVG()   { return '<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M5 21V3"/><path d="M5 3l12 7-12 7z"/></svg>'; }
 }
 
-// ──────────────────────────────────────────────
 // Expose to global scope
-// ──────────────────────────────────────────────
 window.GameUI = GameUI;

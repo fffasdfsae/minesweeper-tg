@@ -1,44 +1,61 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="uk">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
-    <title>Minesweeper</title>
+    <title>Minesweeper TG</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/style.css">
 </head>
-<body>
+<body class="theme-clean-blue">
 
     <!-- Screen 1: Menu -->
     <div id="screen-menu" class="screen active">
+        <div class="screen-header-simple">
+            <div style="width: 40px;"></div>
+            <div style="flex: 1;"></div>
+            <button class="header-btn theme-palette-btn" aria-label="Змінити тему">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 22C17.5228 22 22 17.5228 22 12C22 11.5 21.5 11 21 11H19.5C18.6716 11 18 10.3284 18 9.5V8.5C18 7.67157 17.3284 7 16.5 7H14.5C13.6716 7 13 6.32843 13 5.5V3.5C13 2.67157 12.3284 2 11.5 2C5.97715 2 1.5 6.47715 1.5 12C1.5 17.5228 5.97715 22 12 22Z"/>
+                    <circle cx="7.5" cy="10.5" r="1" fill="currentColor"/>
+                    <circle cx="11.5" cy="7.5" r="1" fill="currentColor"/>
+                    <circle cx="16.5" cy="9.5" r="1" fill="currentColor"/>
+                </svg>
+            </button>
+        </div>
+
         <div class="menu-content">
             <div class="mine-icon-container">
                 <svg class="mine-icon" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <circle cx="60" cy="60" r="40" fill="var(--accent)"/>
-                    <rect x="48" y="0" width="24" height="24" rx="6" fill="var(--accent)"/>
-                    <rect x="48" y="96" width="24" height="24" rx="6" fill="var(--accent)"/>
-                    <rect x="0" y="48" width="24" height="24" rx="6" fill="var(--accent)"/>
-                    <rect x="96" y="48" width="24" height="24" rx="6" fill="var(--accent)"/>
+                    <!-- Symmetrical 8-notch gear/mine logo matching references -->
+                    <circle cx="60" cy="60" r="35" fill="var(--accent)"/>
+                    <rect x="52" y="10" width="16" height="100" rx="4" fill="var(--accent)" />
+                    <rect x="10" y="52" width="100" height="16" rx="4" fill="var(--accent)" />
+                    <rect x="52" y="10" width="16" height="100" rx="4" fill="var(--accent)" transform="rotate(45 60 60)" />
+                    <rect x="52" y="10" width="16" height="100" rx="4" fill="var(--accent)" transform="rotate(-45 60 60)" />
+                    <circle cx="60" cy="60" r="28" fill="var(--accent)"/>
                     <rect x="50" y="50" width="20" height="20" rx="4" fill="var(--bg-primary)"/>
                 </svg>
             </div>
+            
             <div class="difficulty-selector">
-                <button id="diff-prev" class="nav-arrow" aria-label="Previous difficulty">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <button id="diff-prev" class="nav-arrow" aria-label="Попередня складність">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                         <polyline points="15 18 9 12 15 6"></polyline>
                     </svg>
                 </button>
                 <span id="diff-name" class="difficulty-name">Легко</span>
-                <button id="diff-next" class="nav-arrow" aria-label="Next difficulty">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <button id="diff-next" class="nav-arrow" aria-label="Наступна складність">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                         <polyline points="9 18 15 12 9 6"></polyline>
                     </svg>
                 </button>
             </div>
-            <button id="btn-new-game" class="btn-primary">Нова Гра</button>
+            
+            <button id="btn-new-game" class="btn-outlined">Нова гра</button>
         </div>
 
         <div class="bottom-nav">
@@ -48,7 +65,7 @@
                     <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
                 </svg>
             </button>
-            <button id="nav-leaderboard" class="nav-btn" aria-label="Рейтинг">
+            <button id="nav-leaderboard" class="nav-btn" aria-label="Рекорди">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <line x1="8" y1="6" x2="21" y2="6"></line>
                     <line x1="8" y1="12" x2="21" y2="12"></line>
@@ -58,7 +75,7 @@
                     <line x1="3" y1="18" x2="3.01" y2="18"></line>
                 </svg>
             </button>
-            <button id="nav-info" class="nav-btn" aria-label="Info">
+            <button id="nav-info" class="nav-btn" aria-label="Довідка">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <circle cx="12" cy="12" r="10"></circle>
                     <line x1="12" y1="16" x2="12" y2="12"></line>
@@ -71,15 +88,22 @@
     <!-- Screen 2: Game -->
     <div id="screen-game" class="screen">
         <div class="game-header">
-            <button id="game-back" class="header-btn" aria-label="Back">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <button id="game-back" class="header-btn" aria-label="Назад до меню">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                     <polyline points="15 18 9 12 15 6"></polyline>
                 </svg>
             </button>
             <div class="game-stats">
                 <span id="game-timer">0S</span>
             </div>
-            <div style="width: 40px;"></div>
+            <button class="header-btn theme-palette-btn" aria-label="Змінити тему">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 22C17.5228 22 22 17.5228 22 12C22 11.5 21.5 11 21 11H19.5C18.6716 11 18 10.3284 18 9.5V8.5C18 7.67157 17.3284 7 16.5 7H14.5C13.6716 7 13 6.32843 13 5.5V3.5C13 2.67157 12.3284 2 11.5 2C5.97715 2 1.5 6.47715 1.5 12C1.5 17.5228 5.97715 22 12 22Z"/>
+                    <circle cx="7.5" cy="10.5" r="1" fill="currentColor"/>
+                    <circle cx="11.5" cy="7.5" r="1" fill="currentColor"/>
+                    <circle cx="16.5" cy="9.5" r="1" fill="currentColor"/>
+                </svg>
+            </button>
         </div>
 
         <div class="game-board-wrapper" id="board-wrapper">
@@ -89,69 +113,106 @@
             </div>
         </div>
 
-        <div class="action-toggle-container" id="action-toggle-container" style="display: none;">
-            <button id="action-dig" class="action-toggle-btn active" data-action="dig" aria-label="Dig">
-                <svg width="24" height="24" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <circle cx="60" cy="60" r="40" fill="currentColor"/>
-                    <rect x="48" y="0" width="24" height="24" rx="6" fill="currentColor"/>
-                    <rect x="48" y="96" width="24" height="24" rx="6" fill="currentColor"/>
-                    <rect x="0" y="48" width="24" height="24" rx="6" fill="currentColor"/>
-                    <rect x="96" y="48" width="24" height="24" rx="6" fill="currentColor"/>
-                </svg>
-            </button>
-            <button id="action-flag" class="action-toggle-btn" data-action="flag" aria-label="Flag">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M5 21V3"></path>
-                    <path d="M5 3l12 7-12 7" fill="currentColor"></path>
-                </svg>
-            </button>
+        <!-- Gameplay Controls Footer -->
+        <div class="game-footer-controls" id="game-footer-controls">
+            <!-- Active action switcher (shown when playing) -->
+            <div class="action-toggle-container" id="action-toggle-container" style="display: none;">
+                <button id="action-dig" class="action-toggle-btn active" data-action="dig" aria-label="Копати">
+                    <svg width="22" height="22" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="60" cy="60" r="30" fill="currentColor"/>
+                        <rect x="52" y="15" width="16" height="90" rx="4" fill="currentColor"/>
+                        <rect x="15" y="52" width="90" height="16" rx="4" fill="currentColor"/>
+                    </svg>
+                </button>
+                <button id="action-flag" class="action-toggle-btn" data-action="flag" aria-label="Прапорець">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M5 21V3"></path>
+                        <path d="M5 3l12 7-12 7" fill="currentColor"></path>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Game Over controls (shown when idle, won or lost) -->
+            <div class="game-footer" id="game-footer">
+                <button id="game-restart-btn" class="btn-outlined">Нова гра</button>
+                <div class="game-footer-nav">
+                    <button id="game-footer-back" class="nav-arrow" aria-label="Назад до меню">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="15 18 9 12 15 6"></polyline>
+                        </svg>
+                    </button>
+                    <span id="game-difficulty-label" class="game-difficulty-label">Легко</span>
+                    <div style="width: 20px;"></div> <!-- Spacer for balance -->
+                </div>
+            </div>
         </div>
     </div>
 
     <!-- Screen 3: Settings -->
     <div id="screen-settings" class="screen">
         <div class="screen-header">
-            <button id="settings-back" class="header-btn" aria-label="Back">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <button id="settings-back" class="header-btn" aria-label="Назад">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                     <polyline points="15 18 9 12 15 6"></polyline>
                 </svg>
             </button>
             <h1 class="screen-title">Налаштування</h1>
-            <div style="width: 40px;"></div>
+            <button class="header-btn theme-palette-btn" aria-label="Змінити тему">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 22C17.5228 22 22 17.5228 22 12C22 11.5 21.5 11 21 11H19.5C18.6716 11 18 10.3284 18 9.5V8.5C18 7.67157 17.3284 7 16.5 7H14.5C13.6716 7 13 6.32843 13 5.5V3.5C13 2.67157 12.3284 2 11.5 2C5.97715 2 1.5 6.47715 1.5 12C1.5 17.5228 5.97715 22 12 22Z"/>
+                    <circle cx="7.5" cy="10.5" r="1" fill="currentColor"/>
+                    <circle cx="11.5" cy="7.5" r="1" fill="currentColor"/>
+                    <circle cx="16.5" cy="9.5" r="1" fill="currentColor"/>
+                </svg>
+            </button>
         </div>
 
         <div class="settings-content" id="settings-content">
-            <!-- Populated by settings.js -->
+            <!-- Populated dynamically by ui.js -->
         </div>
     </div>
 
     <!-- Screen 4: Leaderboard -->
     <div id="screen-leaderboard" class="screen">
         <div class="screen-header">
-            <button id="leaderboard-back" class="header-btn" aria-label="Back">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <button id="leaderboard-back" class="header-btn" aria-label="Назад">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                     <polyline points="15 18 9 12 15 6"></polyline>
                 </svg>
             </button>
-            <h1 class="screen-title">Рейтинг</h1>
-            <div style="width: 40px;"></div>
+            <h1 class="screen-title">Рекорди</h1>
+            <button class="header-btn theme-palette-btn" aria-label="Змінити тему">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 22C17.5228 22 22 17.5228 22 12C22 11.5 21.5 11 21 11H19.5C18.6716 11 18 10.3284 18 9.5V8.5C18 7.67157 17.3284 7 16.5 7H14.5C13.6716 7 13 6.32843 13 5.5V3.5C13 2.67157 12.3284 2 11.5 2C5.97715 2 1.5 6.47715 1.5 12C1.5 17.5228 5.97715 22 12 22Z"/>
+                    <circle cx="7.5" cy="10.5" r="1" fill="currentColor"/>
+                    <circle cx="11.5" cy="7.5" r="1" fill="currentColor"/>
+                    <circle cx="16.5" cy="9.5" r="1" fill="currentColor"/>
+                </svg>
+            </button>
         </div>
 
         <div class="leaderboard-content" id="leaderboard-content">
-            <!-- Populated by leaderboard.js -->
+            <!-- Populated dynamically by ui.js -->
         </div>
     </div>
 
     <!-- Screen 5: Info -->
     <div id="screen-info" class="screen">
         <div class="screen-header">
-            <button id="info-back" class="header-btn" aria-label="Back">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <button id="info-back" class="header-btn" aria-label="Назад">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                     <polyline points="15 18 9 12 15 6"></polyline>
                 </svg>
             </button>
             <h1 class="screen-title">Як грати</h1>
-            <div style="width: 40px;"></div>
+            <button class="header-btn theme-palette-btn" aria-label="Змінити тему">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 22C17.5228 22 22 17.5228 22 12C22 11.5 21.5 11 21 11H19.5C18.6716 11 18 10.3284 18 9.5V8.5C18 7.67157 17.3284 7 16.5 7H14.5C13.6716 7 13 6.32843 13 5.5V3.5C13 2.67157 12.3284 2 11.5 2C5.97715 2 1.5 6.47715 1.5 12C1.5 17.5228 5.97715 22 12 22Z"/>
+                    <circle cx="7.5" cy="10.5" r="1" fill="currentColor"/>
+                    <circle cx="11.5" cy="7.5" r="1" fill="currentColor"/>
+                    <circle cx="16.5" cy="9.5" r="1" fill="currentColor"/>
+                </svg>
+            </button>
         </div>
 
         <div class="info-content">

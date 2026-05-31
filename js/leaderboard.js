@@ -123,6 +123,17 @@ class Leaderboard {
     }
 
     /**
+     * Remove a specific record by its ID
+     */
+    removeRecord(difficulty, id) {
+        try {
+            this.db.ref('leaderboard/' + difficulty + '/' + id).remove();
+        } catch (e) {
+            console.error('Failed to remove record:', e);
+        }
+    }
+
+    /**
      * Clear records (Disabled for global DB)
      */
     clearRecords() {
